@@ -1,8 +1,7 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Check, Copy, ArrowLeft, Target, Users, Wallet, Monitor, Palette, Clock } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "@/hooks/use-toast";
 
 interface Section {
@@ -16,16 +15,21 @@ const Results = () => {
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
   
-  const result = location.state?.result as string | undefined;
+  const rawResult = location.state?.result as string | undefined;
 
-  if (!result) {
-    navigate("/");
+  useEffect(() => {
+    if (!rawResult) {
+      navigate("/");
+    }
+  }, [rawResult, navigate]);
+
+  if (!rawResult) {
     return null;
   }
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(result);
+      await navigator.clipboard.writeText(rawResult);
       setCopied(true);
       toast({
         title: "Copied!",
@@ -43,7 +47,15 @@ const Results = () => {
 
   const parseResult = (text: string): Section[] => {
     const sections: Section[] = [];
-    const lines = text.split('\n').filter(line => line.trim());
+    
+    // Clean up the text - remove markdown formatting artifacts
+    const cleanText = text
+      .replace(/\\n/g, '\n')
+      .replace(/\*\*/g, '')
+      .replace(/#{1,3}\s*/g, '')
+      .replace(/---/g, '');
+    
+    const lines = cleanText.split('\n').filter(line => line.trim());
     
     let currentSection: Section = { 
       icon: <Target className="h-5 w-5" />, 
@@ -51,47 +63,61 @@ const Results = () => {
       content: [] 
     };
     
-    const sectionConfig: Record<string, { icon: React.JSX.Element; title: string }> = {
-      "strategy": { icon: <Target className="h-5 w-5" />, title: "Strategy" },
-      "overview": { icon: <Target className="h-5 w-5" />, title: "Overview" },
-      "target": { icon: <Users className="h-5 w-5" />, title: "Target Audience" },
-      "audience": { icon: <Users className="h-5 w-5" />, title: "Target Audience" },
-      "budget": { icon: <Wallet className="h-5 w-5" />, title: "Budget" },
-      "allocation": { icon: <Wallet className="h-5 w-5" />, title: "Budget Allocation" },
-      "placement": { icon: <Monitor className="h-5 w-5" />, title: "Ad Placements" },
-      "creative": { icon: <Palette className="h-5 w-5" />, title: "Creatives" },
-      "timeline": { icon: <Clock className="h-5 w-5" />, title: "Timeline" },
-      "milestone": { icon: <Clock className="h-5 w-5" />, title: "Milestones" },
+    const getIconForTitle = (title: string): React.JSX.Element => {
+      const lower = title.toLowerCase();
+      if (lower.includes('strategy') || lower.includes('overview') || lower.includes('business')) {
+        return <Target className="h-5 w-5" />;
+      }
+      if (lower.includes('audience') || lower.includes('target')) {
+        return <Users className="h-5 w-5" />;
+      }
+      if (lower.includes('budget') || lower.includes('allocation') || lower.includes('spend')) {
+        return <Wallet className="h-5 w-5" />;
+      }
+      if (lower.includes('placement') || lower.includes('platform')) {
+        return <Monitor className="h-5 w-5" />;
+      }
+      if (lower.includes('creative') || lower.includes('ad') || lower.includes('content')) {
+        return <Palette className="h-5 w-5" />;
+      }
+      if (lower.includes('timeline') || lower.includes('milestone') || lower.includes('schedule')) {
+        return <Clock className="h-5 w-5" />;
+      }
+      return <Target className="h-5 w-5" />;
     };
     
     lines.forEach(line => {
-      const headerMatch = line.match(/^(?:#{1,3}|\*\*)\s*(.+?)(?:\*\*)?$/);
-      if (headerMatch || line.endsWith(':')) {
+      const trimmedLine = line.trim();
+      
+      // Check if this is a section header (ends with emoji + text or is uppercase)
+      const isHeader = 
+        /^[🎯📊💰📱🎨⏰📈🏢👥🔍✅📋💡🚀]/.test(trimmedLine) ||
+        (trimmedLine.length < 50 && trimmedLine.toUpperCase() === trimmedLine && trimmedLine.length > 3) ||
+        trimmedLine.endsWith(':');
+      
+      if (isHeader) {
         if (currentSection.content.length > 0) {
           sections.push({ ...currentSection });
         }
-        const rawTitle = headerMatch ? headerMatch[1].replace(/\*\*/g, '').trim() : line.replace(':', '').trim();
-        const lowerTitle = rawTitle.toLowerCase();
-        
-        let config: { icon: React.JSX.Element; title: string } = { icon: <Target className="h-5 w-5" />, title: rawTitle };
-        for (const [key, cfg] of Object.entries(sectionConfig)) {
-          if (lowerTitle.includes(key)) {
-            config = cfg;
-            break;
-          }
+        const title = trimmedLine.replace(/[🎯📊💰📱🎨⏰📈🏢👥🔍✅📋💡🚀]/g, '').replace(/:$/, '').trim();
+        currentSection = { 
+          icon: getIconForTitle(title), 
+          title: title || "Details", 
+          content: [] 
+        };
+      } else if (trimmedLine.startsWith('-') || trimmedLine.startsWith('•') || trimmedLine.startsWith('*')) {
+        const content = trimmedLine.replace(/^[-•*]\s*/, '').trim();
+        if (content.length > 2) {
+          currentSection.content.push(content);
         }
-        
-        currentSection = { icon: config.icon, title: config.title, content: [] };
-      } else {
-        const cleanLine = line
-          .replace(/^[-•*]\s*/, '')
-          .replace(/^\d+\.\s*/, '')
-          .replace(/\*\*/g, '')
-          .trim();
-        
-        if (cleanLine && cleanLine.length > 2) {
-          currentSection.content.push(cleanLine);
+      } else if (/^\d+\./.test(trimmedLine)) {
+        const content = trimmedLine.replace(/^\d+\.\s*/, '').trim();
+        if (content.length > 2) {
+          currentSection.content.push(content);
         }
+      } else if (trimmedLine.length > 10) {
+        // Regular paragraph text - treat as bullet point
+        currentSection.content.push(trimmedLine);
       }
     });
     
@@ -99,24 +125,16 @@ const Results = () => {
       sections.push(currentSection);
     }
     
-    // Filter to keep only essential sections (max 6)
-    const priorityOrder = ["Strategy", "Overview", "Target Audience", "Budget", "Budget Allocation", "Ad Placements", "Creatives", "Timeline", "Milestones"];
-    const sortedSections = sections.sort((a, b) => {
-      const aIndex = priorityOrder.findIndex(p => a.title.includes(p));
-      const bIndex = priorityOrder.findIndex(p => b.title.includes(p));
-      return (aIndex === -1 ? 99 : aIndex) - (bIndex === -1 ? 99 : bIndex);
-    });
-    
-    return sortedSections.slice(0, 6);
+    return sections;
   };
 
-  const sections = parseResult(result);
+  const sections = parseResult(rawResult);
 
   return (
-    <main className="min-h-screen gradient-bg py-8 px-4">
-      <div className="max-w-5xl mx-auto">
+    <main className="min-h-screen gradient-bg py-6 px-4 md:px-8">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-6">
           <Button
             variant="ghost"
             onClick={() => navigate("/")}
@@ -146,45 +164,39 @@ const Results = () => {
         </div>
 
         {/* Title */}
-        <div className="text-center mb-10">
+        <div className="text-center mb-8">
           <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
             Your Campaign Plan
           </h1>
-          <p className="text-muted-foreground">
-            AI-generated Meta Ads strategy
-          </p>
         </div>
 
-        {/* Results Grid */}
-        <div className="grid gap-6 md:grid-cols-2">
+        {/* Full-width sections */}
+        <div className="space-y-6">
           {sections.map((section, index) => (
-            <Card 
+            <section 
               key={index} 
-              className="border-border/50 bg-card/80 backdrop-blur-sm animate-in fade-in slide-in-from-bottom-4"
-              style={{ animationDelay: `${index * 100}ms` }}
+              className="bg-card/60 backdrop-blur-sm border border-border/50 rounded-xl p-6 animate-in fade-in slide-in-from-bottom-4"
+              style={{ animationDelay: `${index * 50}ms` }}
             >
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-3 text-lg">
-                  <div className="p-2 rounded-lg bg-primary/10 text-primary">
-                    {section.icon}
-                  </div>
-                  {section.title}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2">
-                  {section.content.slice(0, 5).map((item, itemIndex) => (
-                    <li 
-                      key={itemIndex} 
-                      className="text-sm text-muted-foreground flex items-start gap-2"
-                    >
-                      <span className="text-primary mt-0.5 flex-shrink-0">•</span>
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2.5 rounded-lg bg-primary/10 text-primary">
+                  {section.icon}
+                </div>
+                <h2 className="text-xl font-semibold text-foreground">{section.title}</h2>
+              </div>
+              
+              <ul className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+                {section.content.map((item, itemIndex) => (
+                  <li 
+                    key={itemIndex} 
+                    className="flex items-start gap-3 text-muted-foreground p-2 rounded-lg hover:bg-muted/30 transition-colors"
+                  >
+                    <span className="text-primary mt-1 flex-shrink-0">•</span>
+                    <span className="text-sm leading-relaxed">{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
           ))}
         </div>
       </div>
@@ -193,4 +205,3 @@ const Results = () => {
 };
 
 export default Results;
-
