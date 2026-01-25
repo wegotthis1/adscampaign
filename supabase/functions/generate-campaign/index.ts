@@ -67,39 +67,28 @@ serve(async (req) => {
 
     const vellumData = await vellumResponse.json();
     
-    console.log("Vellum response structure:", JSON.stringify(vellumData, null, 2));
-    
-    // Extract the result from Vellum response - only get the actual campaign text
+    // Extract the result from Vellum response - handle nested structure
     let result = "";
     
-    // Check if outputs is an array
-    if (vellumData.outputs && Array.isArray(vellumData.outputs)) {
-      // Try known output names first
-      const knownNames = ["campaign_strategy", "campaign_plan", "output", "result"];
-      for (const name of knownNames) {
-        const found = vellumData.outputs.find((o: { name: string; value?: unknown }) => o.name === name);
-        if (found?.value && typeof found.value === "string") {
-          result = found.value;
-          console.log(`Found result in output named: ${name}`);
-          break;
-        }
-      }
-      
-      // Fallback: find any string output
-      if (!result) {
-        for (const output of vellumData.outputs) {
+    // Vellum returns: { data: { outputs: [...] } } or { outputs: [...] }
+    const outputs = vellumData.data?.outputs || vellumData.outputs;
+    
+    if (outputs && Array.isArray(outputs)) {
+      // Look for campaign_strategy output
+      const campaignOutput = outputs.find(
+        (o: { name: string; value?: string }) => o.name === "campaign_strategy"
+      );
+      if (campaignOutput?.value) {
+        result = campaignOutput.value;
+      } else {
+        // Fallback: find any STRING output with a value
+        for (const output of outputs) {
           if (output.type === "STRING" && output.value && typeof output.value === "string") {
             result = output.value;
-            console.log(`Found result in output: ${output.name || "unnamed"}`);
             break;
           }
         }
       }
-    }
-    
-    // Try other possible response structures
-    if (!result && typeof vellumData.result === "string") {
-      result = vellumData.result;
     }
     
     if (!result) {
@@ -109,8 +98,6 @@ serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-    
-    console.log("Extracted result length:", result.length);
 
     return new Response(
       JSON.stringify({ result }),
