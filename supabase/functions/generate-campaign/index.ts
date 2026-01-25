@@ -67,38 +67,50 @@ serve(async (req) => {
 
     const vellumData = await vellumResponse.json();
     
-    // Extract the result from Vellum response
+    console.log("Vellum response structure:", JSON.stringify(vellumData, null, 2));
+    
+    // Extract the result from Vellum response - only get the actual campaign text
     let result = "";
+    
+    // Check if outputs is an array
     if (vellumData.outputs && Array.isArray(vellumData.outputs)) {
-      // Find the first output with a string value
-      const outputValue = vellumData.outputs.find(
-        (o: { name: string; type: string; value: string }) => 
-          o.type === "STRING" && o.value
-      );
-      result = outputValue?.value || "";
+      // Try known output names first
+      const knownNames = ["campaign_strategy", "campaign_plan", "output", "result"];
+      for (const name of knownNames) {
+        const found = vellumData.outputs.find((o: { name: string; value?: unknown }) => o.name === name);
+        if (found?.value && typeof found.value === "string") {
+          result = found.value;
+          console.log(`Found result in output named: ${name}`);
+          break;
+        }
+      }
       
-      // Fallback: try known output names
+      // Fallback: find any string output
       if (!result) {
-        const knownNames = ["campaign_strategy", "output", "result", "campaign_plan"];
-        for (const name of knownNames) {
-          const found = vellumData.outputs.find((o: { name: string }) => o.name === name);
-          if (found?.value) {
-            result = found.value;
+        for (const output of vellumData.outputs) {
+          if (output.type === "STRING" && output.value && typeof output.value === "string") {
+            result = output.value;
+            console.log(`Found result in output: ${output.name || "unnamed"}`);
             break;
           }
         }
       }
-    } else if (vellumData.result) {
+    }
+    
+    // Try other possible response structures
+    if (!result && typeof vellumData.result === "string") {
       result = vellumData.result;
     }
     
     if (!result) {
-      console.error("Could not extract result from Vellum response:", JSON.stringify(vellumData));
+      console.error("Could not extract result. Full response:", JSON.stringify(vellumData));
       return new Response(
-        JSON.stringify({ error: "Failed to parse campaign plan" }),
+        JSON.stringify({ error: "Failed to parse campaign plan from AI response" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+    
+    console.log("Extracted result length:", result.length);
 
     return new Response(
       JSON.stringify({ result }),
