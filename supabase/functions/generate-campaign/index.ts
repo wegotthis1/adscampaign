@@ -68,15 +68,36 @@ serve(async (req) => {
     const vellumData = await vellumResponse.json();
     
     // Extract the result from Vellum response
-    // The structure depends on your Vellum workflow outputs
     let result = "";
     if (vellumData.outputs && Array.isArray(vellumData.outputs)) {
-      const outputValue = vellumData.outputs.find((o: { name: string }) => o.name === "output" || o.name === "result" || o.name === "campaign_plan");
-      result = outputValue?.value || JSON.stringify(vellumData.outputs);
+      // Find the first output with a string value
+      const outputValue = vellumData.outputs.find(
+        (o: { name: string; type: string; value: string }) => 
+          o.type === "STRING" && o.value
+      );
+      result = outputValue?.value || "";
+      
+      // Fallback: try known output names
+      if (!result) {
+        const knownNames = ["campaign_strategy", "output", "result", "campaign_plan"];
+        for (const name of knownNames) {
+          const found = vellumData.outputs.find((o: { name: string }) => o.name === name);
+          if (found?.value) {
+            result = found.value;
+            break;
+          }
+        }
+      }
     } else if (vellumData.result) {
       result = vellumData.result;
-    } else {
-      result = JSON.stringify(vellumData);
+    }
+    
+    if (!result) {
+      console.error("Could not extract result from Vellum response:", JSON.stringify(vellumData));
+      return new Response(
+        JSON.stringify({ error: "Failed to parse campaign plan" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     return new Response(
