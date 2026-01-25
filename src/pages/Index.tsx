@@ -1,15 +1,14 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import CampaignForm, { FormData } from "@/components/CampaignForm";
-import CampaignResults from "@/components/CampaignResults";
 import { toast } from "@/hooks/use-toast";
 
 const Index = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const [result, setResult] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const handleGenerate = async (formData: FormData) => {
     setIsLoading(true);
-    setResult(null);
 
     try {
       const response = await fetch(
@@ -36,7 +35,7 @@ const Index = () => {
       }
 
       const data = await response.json();
-      setResult(data.result);
+      navigate("/results", { state: { result: data.result } });
     } catch (error) {
       console.error("Error generating campaign:", error);
       toast({
@@ -64,9 +63,6 @@ const Index = () => {
 
         {/* Form */}
         <CampaignForm onGenerate={handleGenerate} isLoading={isLoading} />
-
-        {/* Results */}
-        {result && <CampaignResults result={result} />}
       </div>
     </main>
   );
