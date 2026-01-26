@@ -38,21 +38,31 @@
      return { error };
    };
  
-   const signIn = async (email: string, password: string) => {
-     const { error } = await supabase.auth.signInWithPassword({
-       email,
-       password,
-     });
-     return { error };
-   };
+  const signIn = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    return { error };
+  };
+
+  const signInWithGoogle = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin,
+      },
+    });
+    return { error };
+  };
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+  };
  
-   const signOut = async () => {
-     await supabase.auth.signOut();
-   };
- 
-   return (
-     <AuthContext.Provider value={{ session, user, loading, signUp, signIn, signOut }}>
-       {children}
+  return (
+    <AuthContext.Provider value={{ session, user, loading, signUp, signIn, signInWithGoogle, signOut }}>
+      {children}
      </AuthContext.Provider>
    );
  }
