@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,6 +13,34 @@ serve(async (req) => {
   }
 
   try {
+    // Verify user is authenticated
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized - Missing or invalid authorization header" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await supabaseClient.auth.getClaims(token);
+
+    if (claimsError || !claimsData?.claims) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized - Invalid or expired token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const userId = claimsData.claims.sub;
+    console.log("Authenticated user:", userId);
+
     const VELLUM_API_KEY = Deno.env.get("VELLUM_API_KEY");
     if (!VELLUM_API_KEY) {
       throw new Error("VELLUM_API_KEY is not configured");
@@ -19,10 +48,49 @@ serve(async (req) => {
 
     const { websiteUrl, objective, skillLevel, budgetRange, currency } = await req.json();
 
-    // Validate inputs
+    // Validate inputs with proper type and format checking
     if (!websiteUrl || !objective || !skillLevel || !budgetRange || !currency) {
       return new Response(
         JSON.stringify({ error: "All fields are required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate input types
+    if (typeof websiteUrl !== "string" || typeof objective !== "string" || 
+        typeof skillLevel !== "string" || typeof budgetRange !== "string" || 
+        typeof currency !== "string") {
+      return new Response(
+        JSON.stringify({ error: "Invalid input types" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate input lengths to prevent abuse
+    const maxLength = 500;
+    if (websiteUrl.length > maxLength || objective.length > maxLength || 
+        skillLevel.length > 100 || budgetRange.length > 50 || currency.length > 10) {
+      return new Response(
+        JSON.stringify({ error: "Input values exceed maximum allowed length" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate URL format
+    try {
+      new URL(websiteUrl);
+    } catch {
+      return new Response(
+        JSON.stringify({ error: "Invalid website URL format" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate currency against allowed values
+    const allowedCurrencies = ["INR", "USD", "EUR"];
+    if (!allowedCurrencies.includes(currency)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid currency. Allowed: INR, USD, EUR" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
