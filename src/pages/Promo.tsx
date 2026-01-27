@@ -1,8 +1,9 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Sparkles, Target, Zap, TrendingUp, ArrowRight, LogIn, UserPlus } from "lucide-react";
+import { Target, Zap, TrendingUp, ArrowRight, LogIn, UserPlus, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import logo from "@/assets/logo.png";
 
 const Promo = () => {
   const navigate = useNavigate();
@@ -45,7 +46,7 @@ const Promo = () => {
       <header className="py-4 px-4">
         <div className="max-w-6xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-6 h-6 text-primary" />
+            <img src={logo} alt="Meta Ads AI Logo" className="w-8 h-8 object-contain" />
             <span className="font-bold text-lg text-foreground">Meta Ads AI</span>
           </div>
           
