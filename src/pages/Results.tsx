@@ -1,7 +1,7 @@
+import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Check, Copy, ArrowLeft, Target, Users, Wallet, Monitor, Palette, Clock } from "lucide-react";
-import { useState, useEffect } from "react";
 import { toast } from "@/hooks/use-toast";
 
 interface Section {
@@ -178,21 +178,21 @@ const Results = () => {
               className="bg-card/60 backdrop-blur-sm border border-border/50 rounded-xl p-6 animate-in fade-in slide-in-from-bottom-4"
               style={{ animationDelay: `${index * 50}ms` }}
             >
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2.5 rounded-lg bg-primary/10 text-primary">
-                  {section.icon}
+              <div className="flex items-center gap-3 mb-5 pb-3 border-b border-border/50">
+                <div className="p-3 rounded-xl bg-primary/10 text-primary">
+                  {React.cloneElement(section.icon, { className: "h-6 w-6" })}
                 </div>
-                <h2 className="text-xl font-semibold text-foreground">{section.title}</h2>
+                <h2 className="text-2xl md:text-3xl font-bold text-foreground">{section.title}</h2>
               </div>
               
-              <ul className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+              <ul className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                 {section.content.map((item, itemIndex) => (
                   <li 
                     key={itemIndex} 
-                    className="flex items-start gap-3 text-muted-foreground p-2 rounded-lg hover:bg-muted/30 transition-colors"
+                    className="flex items-start gap-3 text-muted-foreground p-3 rounded-lg hover:bg-muted/30 transition-colors"
                   >
-                    <span className="text-primary mt-1 flex-shrink-0">•</span>
-                    <span className="text-sm leading-relaxed">{item}</span>
+                    <span className="text-primary mt-0.5 flex-shrink-0 text-lg">•</span>
+                    <span className="text-base leading-relaxed">{item}</span>
                   </li>
                 ))}
               </ul>
