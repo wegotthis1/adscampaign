@@ -33,11 +33,7 @@ const Promo = () => {
   ];
 
   const handleGetStarted = () => {
-    if (user) {
-      navigate("/generator");
-    } else {
-      navigate("/auth");
-    }
+    navigate("/generator");
   };
 
   return (

@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import CampaignForm, { FormData } from "@/components/CampaignForm";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, LogOut } from "lucide-react";
+import { ArrowLeft, LogOut, LogIn } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
@@ -12,14 +12,17 @@ const Index = () => {
   const navigate = useNavigate();
   const { user, loading, signOut } = useAuth();
 
-  // Redirect to auth if not logged in
-  useEffect(() => {
-    if (!loading && !user) {
-      navigate("/auth");
-    }
-  }, [user, loading, navigate]);
-
   const handleGenerate = async (formData: FormData) => {
+    // Check auth before generating
+    if (!user) {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to generate your campaign plan.",
+      });
+      navigate("/auth", { state: { returnTo: "/generator" } });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -32,7 +35,7 @@ const Index = () => {
           description: "Please sign in again to continue.",
           variant: "destructive",
         });
-        navigate("/auth");
+        navigate("/auth", { state: { returnTo: "/generator" } });
         return;
       }
 
@@ -73,20 +76,6 @@ const Index = () => {
     }
   };
 
-  // Show loading state while checking auth
-  if (loading) {
-    return (
-      <main className="min-h-screen gradient-bg py-12 px-4 flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
-      </main>
-    );
-  }
-
-  // Don't render if not authenticated (will redirect)
-  if (!user) {
-    return null;
-  }
-
   return (
     <main className="min-h-screen gradient-bg py-12 px-4">
       <div className="max-w-4xl mx-auto flex flex-col items-center">
@@ -97,13 +86,24 @@ const Index = () => {
             Back
           </Button>
           <div className="flex items-center gap-3">
-            <span className="text-sm text-muted-foreground hidden sm:inline">
-              {user.email}
-            </span>
-            <Button variant="outline" size="sm" onClick={() => signOut()}>
-              <LogOut className="mr-2 h-4 w-4" />
-              Sign Out
-            </Button>
+            {loading ? (
+              <div className="h-9 w-24 bg-muted animate-pulse rounded-md" />
+            ) : user ? (
+              <>
+                <span className="text-sm text-muted-foreground hidden sm:inline">
+                  {user.email}
+                </span>
+                <Button variant="outline" size="sm" onClick={() => signOut()}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sign Out
+                </Button>
+              </>
+            ) : (
+              <Button variant="outline" size="sm" onClick={() => navigate("/auth", { state: { returnTo: "/generator" } })}>
+                <LogIn className="mr-2 h-4 w-4" />
+                Sign In
+              </Button>
+            )}
           </div>
         </div>
 
