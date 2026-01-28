@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Target, Zap, TrendingUp, ArrowRight, LogIn, UserPlus, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import logo from "@/assets/logo.png";
+import Footer from "@/components/Footer";
 
 const Promo = () => {
   const navigate = useNavigate();
@@ -186,6 +187,8 @@ const Promo = () => {
           </Card>
         </div>
       </section>
+
+      <Footer />
     </main>
   );
 };
