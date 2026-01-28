@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Loader2, Sparkles } from "lucide-react";
+import logo from "@/assets/logo.png";
 
 interface CampaignFormProps {
   onGenerate: (data: FormData) => void;
@@ -50,9 +51,7 @@ const CampaignForm = ({ onGenerate, isLoading }: CampaignFormProps) => {
     <Card className="w-full max-w-2xl border-border/50 bg-card/80 backdrop-blur-sm glow-effect">
       <CardHeader className="text-center pb-2">
         <div className="flex items-center justify-center gap-2 mb-2">
-          <div className="p-2 rounded-lg meta-gradient">
-            <Sparkles className="h-6 w-6 text-primary-foreground" />
-          </div>
+          <img src={logo} alt="Meta Ads AI Logo" className="h-12 w-auto object-contain" />
         </div>
         <CardTitle className="text-3xl font-bold tracking-tight">
           Meta Ads Campaign Generator
