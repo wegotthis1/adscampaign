@@ -64,7 +64,7 @@ const Index = () => {
       }
 
       const data = await response.json();
-      navigate("/results", { state: { result: data.result } });
+      navigate("/results", { state: { result: data.result, websiteUrl: formData.websiteUrl } });
     } catch (error) {
       console.error("Error generating campaign:", error);
       toast({

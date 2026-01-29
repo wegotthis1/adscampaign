@@ -17,6 +17,16 @@ const Results = () => {
   const [copied, setCopied] = useState(false);
   
   const rawResult = location.state?.result as string | undefined;
+  const websiteUrl = location.state?.websiteUrl as string | undefined;
+  
+  // Extract business name from URL (e.g., "example.com" -> "Example")
+  const getBusinessName = (url: string | undefined): string => {
+    if (!url) return "Your Business";
+    const domain = url.replace(/^(https?:\/\/)?(www\.)?/, '').split('/')[0].split('.')[0];
+    return domain.charAt(0).toUpperCase() + domain.slice(1);
+  };
+  
+  const businessName = getBusinessName(websiteUrl);
 
   useEffect(() => {
     // Scroll to top when component mounts
@@ -171,7 +181,7 @@ const Results = () => {
             <div className="text-center">
               <p className="text-sm uppercase tracking-widest text-muted-foreground mb-2">Campaign Strategy Report</p>
               <h1 className="text-4xl md:text-5xl font-bold tracking-tight bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
-                Your Campaign Plan
+                {businessName} Campaign Plan
               </h1>
               <p className="text-muted-foreground mt-4 max-w-2xl mx-auto">
                 A comprehensive advertising strategy tailored to your business goals and target audience.
