@@ -189,6 +189,15 @@ const CampaignForm = ({ onGenerate, isLoading }: CampaignFormProps) => {
               </>
             )}
           </Button>
+
+          {/* Loading Message */}
+          {isLoading && (
+            <div className="text-center p-4 rounded-lg bg-primary/10 border border-primary/20 animate-pulse">
+              <p className="text-sm text-muted-foreground">
+                ⏳ It will take 1 to 2 minutes, for best possible strategy, to flip the switch!
+              </p>
+            </div>
+          )}
         </form>
       </CardContent>
     </Card>
