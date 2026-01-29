@@ -19,6 +19,9 @@ const Results = () => {
   const rawResult = location.state?.result as string | undefined;
 
   useEffect(() => {
+    // Scroll to top when component mounts
+    window.scrollTo(0, 0);
+    
     if (!rawResult) {
       navigate("/");
     }
