@@ -132,6 +132,26 @@ serve(async (req) => {
     }
 
     const vellumData = await vellumResponse.json();
+
+    // Check if the workflow was rejected (e.g. upstream model overloaded)
+    const state = vellumData.data?.state || vellumData.state;
+    if (state === "REJECTED") {
+      const errorMsg = vellumData.data?.error?.message || "The AI service is temporarily unavailable";
+      console.error("Vellum workflow rejected:", errorMsg);
+      
+      // Check for specific provider errors
+      if (errorMsg.includes("503") || errorMsg.includes("UNAVAILABLE") || errorMsg.includes("high demand")) {
+        return new Response(
+          JSON.stringify({ error: "The AI model is experiencing high demand. Please try again in a few moments." }),
+          { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      return new Response(
+        JSON.stringify({ error: "Campaign generation failed. Please try again." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
     
     // Extract the result from Vellum response - handle nested structure
     let result = "";
@@ -160,7 +180,7 @@ serve(async (req) => {
     if (!result) {
       console.error("Could not extract result. Full response:", JSON.stringify(vellumData));
       return new Response(
-        JSON.stringify({ error: "Failed to parse campaign plan from AI response" }),
+        JSON.stringify({ error: "Failed to parse campaign plan from AI response. Please try again." }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
