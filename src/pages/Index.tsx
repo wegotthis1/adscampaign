@@ -6,7 +6,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, LogOut, LogIn } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { motion } from "framer-motion";
 import Footer from "@/components/Footer";
+import logo from "@/assets/logo.png";
 
 const Index = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -14,7 +16,6 @@ const Index = () => {
   const { user, loading, signOut } = useAuth();
 
   const handleGenerate = async (formData: FormData) => {
-    // Check auth before generating
     if (!user) {
       toast({
         title: "Sign in required",
@@ -27,7 +28,6 @@ const Index = () => {
     setIsLoading(true);
 
     try {
-      // Get the current session for the auth token
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session?.access_token) {
@@ -78,49 +78,67 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen gradient-bg flex flex-col">
-      <main className="flex-1 py-12 px-4">
-        <div className="max-w-4xl mx-auto flex flex-col items-center">
-          {/* Header */}
-          <div className="w-full flex justify-between items-center mb-8">
-            <Button variant="ghost" onClick={() => navigate("/")}>
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Header */}
+      <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-xl">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="sm" onClick={() => navigate("/")}>
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back
+              Home
             </Button>
-            <div className="flex items-center gap-3">
-              {loading ? (
-                <div className="h-9 w-24 bg-muted animate-pulse rounded-md" />
-              ) : user ? (
-                <>
-                  <span className="text-sm text-muted-foreground hidden sm:inline">
-                    {user.email}
-                  </span>
-                  <Button variant="outline" size="sm" onClick={() => signOut()}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Sign Out
-                  </Button>
-                </>
-              ) : (
-                <Button variant="outline" size="sm" onClick={() => navigate("/auth", { state: { returnTo: "/generator" } })}>
-                  <LogIn className="mr-2 h-4 w-4" />
-                  Sign In
-                </Button>
-              )}
+            <div className="hidden sm:flex items-center gap-2 pl-4 border-l border-border">
+              <img src={logo} alt="Logo" className="w-6 h-6 object-contain" />
+              <span className="text-sm font-semibold text-foreground">Campaign Generator</span>
             </div>
           </div>
-
-          {/* Hero Section */}
-          <div className="text-center mb-10">
-            <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              Meta Ads Campaign Generator
-            </h1>
-            <p className="text-lg text-muted-foreground max-w-xl mx-auto">
-              Create complete, AI-powered campaign plans for your Meta advertising in seconds
-            </p>
+          <div className="flex items-center gap-3">
+            {loading ? (
+              <div className="h-9 w-24 bg-muted animate-pulse rounded-md" />
+            ) : user ? (
+              <>
+                <span className="text-sm text-muted-foreground hidden sm:inline">
+                  {user.email}
+                </span>
+                <Button variant="outline" size="sm" onClick={() => signOut()}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sign Out
+                </Button>
+              </>
+            ) : (
+              <Button variant="outline" size="sm" onClick={() => navigate("/auth", { state: { returnTo: "/generator" } })}>
+                <LogIn className="mr-2 h-4 w-4" />
+                Sign In
+              </Button>
+            )}
           </div>
+        </div>
+      </header>
 
-          {/* Form */}
-          <CampaignForm onGenerate={handleGenerate} isLoading={isLoading} />
+      <main className="flex-1 py-12 lg:py-16 px-4">
+        <div className="max-w-4xl mx-auto flex flex-col items-center">
+          <motion.div
+            className="text-center mb-10"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-3">
+              <span className="text-gradient">Build Your Campaign</span>
+            </h1>
+            <p className="text-muted-foreground max-w-xl mx-auto">
+              Fill in the details below and our AI will generate a comprehensive campaign strategy for your business.
+            </p>
+          </motion.div>
+
+          <motion.div
+            className="w-full flex justify-center"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+          >
+            <CampaignForm onGenerate={handleGenerate} isLoading={isLoading} />
+          </motion.div>
         </div>
       </main>
       <Footer />
