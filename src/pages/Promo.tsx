@@ -77,8 +77,10 @@ const Promo = () => {
             <img src={logo} alt="Meta Ads AI Logo" className="w-8 h-8 object-contain" />
             <span className="font-bold text-lg text-foreground tracking-tight">Meta Ads AI</span>
           </div>
-          
-          <div className="flex items-center gap-3">
+          <nav className="flex items-center gap-4">
+            <Button variant="ghost" size="sm" onClick={() => navigate("/pricing")} className="hidden sm:flex">
+              Pricing
+            </Button>
             {loading ? (
               <div className="h-10 w-24 bg-muted animate-pulse rounded-md" />
             ) : user ? (
