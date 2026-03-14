@@ -59,7 +59,7 @@ const Promo = () => {
   ];
 
   const trustPoints = [
-    "No credit card required",
+    "1 free generation included",
     "Enterprise-grade AI models",
     "SOC 2 compliant infrastructure",
   ];
