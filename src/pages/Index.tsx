@@ -141,6 +141,27 @@ const Index = () => {
             <p className="text-muted-foreground max-w-xl mx-auto">
               Fill in the details below and our AI will generate a comprehensive campaign strategy for your business.
             </p>
+            {user && !limitLoading && (
+              <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-card border border-border text-sm">
+                {canGenerate ? (
+                  <>
+                    <span className="text-muted-foreground">
+                      {generationsUsed}/{generationsLimit} generations used
+                    </span>
+                    <span className="text-xs text-primary font-medium capitalize">({plan} plan)</span>
+                  </>
+                ) : (
+                  <>
+                    <Lock className="w-4 h-4 text-destructive" />
+                    <span className="text-muted-foreground">Limit reached</span>
+                    <Button variant="link" size="sm" className="h-auto p-0 text-primary" onClick={() => navigate("/pricing")}>
+                      <Crown className="w-3 h-3 mr-1" />
+                      Upgrade
+                    </Button>
+                  </>
+                )}
+              </div>
+            )}
           </motion.div>
 
           <motion.div
