@@ -3,8 +3,9 @@ import { useNavigate } from "react-router-dom";
 import CampaignForm, { FormData } from "@/components/CampaignForm";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useGenerationLimit } from "@/hooks/useGenerationLimit";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, LogOut, LogIn } from "lucide-react";
+import { ArrowLeft, LogOut, LogIn, Crown, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
 import Footer from "@/components/Footer";
@@ -14,6 +15,7 @@ const Index = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { user, loading, signOut } = useAuth();
+  const { canGenerate, generationsUsed, generationsLimit, plan, loading: limitLoading, incrementCount } = useGenerationLimit();
 
   const handleGenerate = async (formData: FormData) => {
     if (!user) {
@@ -22,6 +24,15 @@ const Index = () => {
         description: "Please sign in to generate your campaign plan.",
       });
       navigate("/auth", { state: { returnTo: "/generator" } });
+      return;
+    }
+
+    if (!canGenerate) {
+      toast({
+        title: "Generation limit reached",
+        description: "You've used all your free generations. Upgrade to continue.",
+      });
+      navigate("/pricing");
       return;
     }
 
@@ -64,6 +75,7 @@ const Index = () => {
       }
 
       const data = await response.json();
+      await incrementCount();
       navigate("/results", { state: { result: data.result, websiteUrl: formData.websiteUrl } });
     } catch (error) {
       console.error("Error generating campaign:", error);
@@ -129,6 +141,27 @@ const Index = () => {
             <p className="text-muted-foreground max-w-xl mx-auto">
               Fill in the details below and our AI will generate a comprehensive campaign strategy for your business.
             </p>
+            {user && !limitLoading && (
+              <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-card border border-border text-sm">
+                {canGenerate ? (
+                  <>
+                    <span className="text-muted-foreground">
+                      {generationsUsed}/{generationsLimit} generations used
+                    </span>
+                    <span className="text-xs text-primary font-medium capitalize">({plan} plan)</span>
+                  </>
+                ) : (
+                  <>
+                    <Lock className="w-4 h-4 text-destructive" />
+                    <span className="text-muted-foreground">Limit reached</span>
+                    <Button variant="link" size="sm" className="h-auto p-0 text-primary" onClick={() => navigate("/pricing")}>
+                      <Crown className="w-3 h-3 mr-1" />
+                      Upgrade
+                    </Button>
+                  </>
+                )}
+              </div>
+            )}
           </motion.div>
 
           <motion.div
