@@ -109,7 +109,7 @@ const Promo = () => {
                 </Button>
               </>
             )}
-          </div>
+          </nav>
         </div>
       </header>
 
