@@ -15,6 +15,7 @@ const Index = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { user, loading, signOut } = useAuth();
+  const { canGenerate, generationsUsed, generationsLimit, plan, loading: limitLoading, incrementCount } = useGenerationLimit();
 
   const handleGenerate = async (formData: FormData) => {
     if (!user) {
@@ -23,6 +24,15 @@ const Index = () => {
         description: "Please sign in to generate your campaign plan.",
       });
       navigate("/auth", { state: { returnTo: "/generator" } });
+      return;
+    }
+
+    if (!canGenerate) {
+      toast({
+        title: "Generation limit reached",
+        description: "You've used all your free generations. Upgrade to continue.",
+      });
+      navigate("/pricing");
       return;
     }
 
