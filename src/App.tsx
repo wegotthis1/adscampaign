@@ -8,6 +8,7 @@ import Promo from "./pages/Promo";
 import Index from "./pages/Index";
 import Results from "./pages/Results";
 import Auth from "./pages/Auth";
+import Pricing from "./pages/Pricing";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
