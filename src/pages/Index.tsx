@@ -75,6 +75,7 @@ const Index = () => {
       }
 
       const data = await response.json();
+      await incrementCount();
       navigate("/results", { state: { result: data.result, websiteUrl: formData.websiteUrl } });
     } catch (error) {
       console.error("Error generating campaign:", error);
