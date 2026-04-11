@@ -151,3 +151,12 @@
     background-size: 24px 24px;
   }
 }
+@layer base {
+  #lovable-badge {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+}
+
