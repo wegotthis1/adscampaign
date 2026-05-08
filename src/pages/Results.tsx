@@ -7,6 +7,7 @@ import ResultsHeader from "@/components/results/ResultsHeader";
 import ReportHero from "@/components/results/ReportHero";
 import TableOfContents from "@/components/results/TableOfContents";
 import ReportSection from "@/components/results/ReportSection";
+import PerformanceScore from "@/components/results/PerformanceScore";
 import { parseResult } from "@/components/results/parseResult";
 
 const Results = () => {
@@ -67,6 +68,8 @@ const Results = () => {
             sectionCount={sections.length}
             totalPoints={totalPoints}
           />
+
+          <PerformanceScore campaignPlan={rawResult} />
 
           <TableOfContents sections={sections} activeSection={activeSection} />
 
