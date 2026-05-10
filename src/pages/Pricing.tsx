@@ -170,11 +170,14 @@ const Pricing = () => {
               title: "Payment Successful! 🎉",
               description: "Your plan has been upgraded. Start generating campaigns!",
             });
+            await refreshLimit();
+            setLoadingPlan(null);
             navigate("/generator");
           } catch {
+            setLoadingPlan(null);
             toast({
               title: "Verification Failed",
-              description: "Payment received but verification failed. Please contact support.",
+              description: "Payment received but verification failed. We'll reconcile it shortly — please refresh in a minute or contact support.",
               variant: "destructive",
             });
           }
@@ -187,16 +190,20 @@ const Pricing = () => {
       };
 
       const rzp = new window.Razorpay(options);
+      rzp.on("payment.failed", () => {
+        setLoadingPlan(null);
+        toast({ title: "Payment Failed", description: "The payment was not completed.", variant: "destructive" });
+      });
       rzp.open();
+      // Note: do not clear loadingPlan here — modal handlers manage it
     } catch (error) {
       console.error("Payment error:", error);
+      setLoadingPlan(null);
       toast({
         title: "Payment Error",
         description: error instanceof Error ? error.message : "Something went wrong.",
         variant: "destructive",
       });
-    } finally {
-      setLoadingPlan(null);
     }
   };
 
