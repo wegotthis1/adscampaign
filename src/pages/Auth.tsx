@@ -190,7 +190,17 @@ const Auth = () => {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="signin-password" className="text-sm font-medium">Password</Label>
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="signin-password" className="text-sm font-medium">Password</Label>
+                          <button
+                            type="button"
+                            onClick={handleForgotPassword}
+                            disabled={isResetting}
+                            className="text-xs text-primary hover:underline disabled:opacity-50"
+                          >
+                            {isResetting ? "Sending..." : "Forgot password?"}
+                          </button>
+                        </div>
                         <Input
                           id="signin-password"
                           type="password"
