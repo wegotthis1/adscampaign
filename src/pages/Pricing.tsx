@@ -288,23 +288,29 @@ const Pricing = () => {
                         ))}
                       </ul>
 
-                      <Button
-                        onClick={() => handlePurchase(plan.id)}
-                        disabled={loadingPlan !== null}
-                        className={`w-full h-12 text-base ${
-                          plan.popular ? "meta-gradient enterprise-shadow" : ""
-                        }`}
-                        variant={plan.popular ? "default" : "outline"}
-                      >
-                        {loadingPlan === plan.id ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Processing...
-                          </>
-                        ) : (
-                          `Get ${plan.name}`
-                        )}
-                      </Button>
+                      {(() => {
+                        const isCurrent = user && currentPlan === plan.id;
+                        return (
+                          <Button
+                            onClick={() => handlePurchase(plan.id)}
+                            disabled={loadingPlan !== null || authLoading || !!isCurrent}
+                            className={`w-full h-12 text-base ${
+                              plan.popular ? "meta-gradient enterprise-shadow" : ""
+                            }`}
+                            variant={plan.popular ? "default" : "outline"}
+                          >
+                            {loadingPlan === plan.id ? (
+                              <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Processing...</>
+                            ) : isCurrent ? (
+                              "Current Plan"
+                            ) : authLoading ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              `Get ${plan.name}`
+                            )}
+                          </Button>
+                        );
+                      })()}
                     </CardContent>
                   </Card>
                 </motion.div>
