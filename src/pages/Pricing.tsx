@@ -83,6 +83,7 @@ const fadeUp = {
 const Pricing = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
+  const { plan: currentPlan, refresh: refreshLimit } = useGenerationLimit();
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
   const loadRazorpayScript = (): Promise<boolean> => {
@@ -129,7 +130,7 @@ const Pricing = () => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session.access_token}`,
           },
-          body: JSON.stringify({ plan: planId, currency: "INR" }),
+          body: JSON.stringify({ plan: planId }),
         }
       );
 
