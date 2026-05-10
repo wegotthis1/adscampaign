@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,8 +17,11 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const { signUp, signIn, signInWithGoogle } = useAuth();
+  const [isResetting, setIsResetting] = useState(false);
+  const { signUp, signIn, signInWithGoogle, resetPassword } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const returnTo = (location.state as { returnTo?: string } | null)?.returnTo ?? "/generator";
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,14 +34,21 @@ const Auth = () => {
       return;
     }
     setIsLoading(true);
-    const { error } = await signUp(email, password);
+    const { error, needsEmailConfirmation } = await signUp(email, password);
     setIsLoading(false);
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "Success", description: "Account created! You can now sign in." });
-      navigate("/generator");
+      return;
     }
+    if (needsEmailConfirmation) {
+      toast({
+        title: "Check your email",
+        description: "We sent you a confirmation link. Click it to activate your account.",
+      });
+      return;
+    }
+    toast({ title: "Welcome!", description: "Your account is ready." });
+    navigate(returnTo);
   };
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -54,7 +64,7 @@ const Auth = () => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Welcome back!", description: "Successfully signed in." });
-      navigate("/generator");
+      navigate(returnTo);
     }
   };
 
@@ -64,6 +74,21 @@ const Auth = () => {
     setIsGoogleLoading(false);
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      toast({ title: "Enter your email", description: "Type your email above, then click 'Forgot password' again.", variant: "destructive" });
+      return;
+    }
+    setIsResetting(true);
+    const { error } = await resetPassword(email);
+    setIsResetting(false);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Email sent", description: "Check your inbox for a password reset link." });
     }
   };
 
