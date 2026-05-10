@@ -6,58 +6,35 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const PLAN_LIMITS: Record<string, number> = {
-  starter: 10,
-  pro: 50,
-  enterprise: 999,
-};
+const PLAN_LIMITS: Record<string, number> = { starter: 10, pro: 50, enterprise: 999 };
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  const json = (b: unknown, s = 200) =>
+    new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   try {
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    if (!authHeader?.startsWith("Bearer ")) return json({ error: "Unauthorized" }, 401);
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_ANON_KEY") ?? "",
       { global: { headers: { Authorization: authHeader } } }
     );
-
     const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    if (userError || !user) return json({ error: "Unauthorized" }, 401);
 
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = await req.json();
-
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-      return new Response(JSON.stringify({ error: "Missing payment details" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return json({ error: "Missing payment details" }, 400);
     }
 
     const RAZORPAY_KEY_SECRET = Deno.env.get("RAZORPAY_KEY_SECRET");
-    if (!RAZORPAY_KEY_SECRET) {
-      return new Response(JSON.stringify({ error: "Payment gateway not configured" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    if (!RAZORPAY_KEY_SECRET) return json({ error: "Payment gateway not configured" }, 500);
 
-    // Verify signature using Web Crypto API
+    // Verify HMAC signature
     const encoder = new TextEncoder();
     const key = await crypto.subtle.importKey(
       "raw",
@@ -66,79 +43,53 @@ serve(async (req) => {
       false,
       ["sign"]
     );
-
     const data = `${razorpay_order_id}|${razorpay_payment_id}`;
-    const signatureBuffer = await crypto.subtle.sign("HMAC", key, encoder.encode(data));
-    const expectedSignature = Array.from(new Uint8Array(signatureBuffer))
+    const sigBuf = await crypto.subtle.sign("HMAC", key, encoder.encode(data));
+    const expected = Array.from(new Uint8Array(sigBuf))
       .map((b) => b.toString(16).padStart(2, "0"))
       .join("");
 
-    if (expectedSignature !== razorpay_signature) {
-      return new Response(JSON.stringify({ error: "Payment verification failed" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    if (expected !== razorpay_signature) return json({ error: "Payment verification failed" }, 400);
 
-    // Payment verified — update DB using service role
     const adminClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Update payment record
-    const { data: paymentData } = await adminClient
+    // Look up the order
+    const { data: paymentRecord } = await adminClient
       .from("user_payments")
-      .update({
-        razorpay_payment_id,
-        status: "paid",
-        updated_at: new Date().toISOString(),
-      })
+      .select("plan, status")
       .eq("razorpay_order_id", razorpay_order_id)
       .eq("user_id", user.id)
-      .select("plan")
-      .single();
+      .maybeSingle();
 
-    if (!paymentData) {
-      return new Response(JSON.stringify({ error: "Payment record not found" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (!paymentRecord) return json({ error: "Payment record not found" }, 404);
+
+    const plan = paymentRecord.plan;
+    const limit = PLAN_LIMITS[plan] ?? 1;
+
+    // Idempotent: if already paid, just return success without re-provisioning
+    if (paymentRecord.status === "paid") {
+      return json({ success: true, plan, generations_limit: limit, already_processed: true });
     }
 
-    const plan = paymentData.plan;
-    const generationsLimit = PLAN_LIMITS[plan] || 1;
+    // Mark paid + provision plan atomically (provision_plan is idempotent)
+    await adminClient
+      .from("user_payments")
+      .update({ razorpay_payment_id, status: "paid", updated_at: new Date().toISOString() })
+      .eq("razorpay_order_id", razorpay_order_id)
+      .eq("user_id", user.id);
 
-    // Upsert user plan
-    await adminClient.from("user_plans").upsert(
-      {
-        user_id: user.id,
-        plan,
-        generations_limit: generationsLimit,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "user_id" }
-    );
+    await adminClient.rpc("provision_plan", {
+      p_user_id: user.id,
+      p_plan: plan,
+      p_limit: limit,
+    });
 
-    // Reset generation count for upgrade
-    await adminClient.from("user_generations").upsert(
-      {
-        user_id: user.id,
-        generation_count: 0,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "user_id" }
-    );
-
-    return new Response(
-      JSON.stringify({ success: true, plan, generations_limit: generationsLimit }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return json({ success: true, plan, generations_limit: limit });
   } catch (error) {
     console.error("Error verifying payment:", error);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return json({ error: error instanceof Error ? error.message : "Unknown error" }, 500);
   }
 });
