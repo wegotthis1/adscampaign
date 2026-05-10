@@ -15,7 +15,7 @@ const Index = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { user, loading, signOut } = useAuth();
-  const { canGenerate, generationsUsed, generationsLimit, plan, loading: limitLoading, incrementCount } = useGenerationLimit();
+  const { canGenerate, generationsUsed, generationsLimit, plan, loading: limitLoading, refresh: refreshLimit } = useGenerationLimit();
 
   const handleGenerate = async (formData: FormData) => {
     if (!user) {
@@ -75,7 +75,7 @@ const Index = () => {
       }
 
       const data = await response.json();
-      await incrementCount();
+      await refreshLimit();
       navigate("/results", { state: { result: data.result, websiteUrl: formData.websiteUrl } });
     } catch (error) {
       console.error("Error generating campaign:", error);

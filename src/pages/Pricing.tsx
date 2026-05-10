@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle2, ArrowLeft, Loader2, Sparkles, Crown, Building2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useGenerationLimit } from "@/hooks/useGenerationLimit";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
@@ -82,6 +83,7 @@ const fadeUp = {
 const Pricing = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
+  const { plan: currentPlan, refresh: refreshLimit } = useGenerationLimit();
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
   const loadRazorpayScript = (): Promise<boolean> => {
@@ -128,7 +130,7 @@ const Pricing = () => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session.access_token}`,
           },
-          body: JSON.stringify({ plan: planId, currency: "INR" }),
+          body: JSON.stringify({ plan: planId }),
         }
       );
 
@@ -168,11 +170,14 @@ const Pricing = () => {
               title: "Payment Successful! 🎉",
               description: "Your plan has been upgraded. Start generating campaigns!",
             });
+            await refreshLimit();
+            setLoadingPlan(null);
             navigate("/generator");
           } catch {
+            setLoadingPlan(null);
             toast({
               title: "Verification Failed",
-              description: "Payment received but verification failed. Please contact support.",
+              description: "Payment received but verification failed. We'll reconcile it shortly — please refresh in a minute or contact support.",
               variant: "destructive",
             });
           }
@@ -185,16 +190,20 @@ const Pricing = () => {
       };
 
       const rzp = new window.Razorpay(options);
+      rzp.on("payment.failed", () => {
+        setLoadingPlan(null);
+        toast({ title: "Payment Failed", description: "The payment was not completed.", variant: "destructive" });
+      });
       rzp.open();
+      // Note: do not clear loadingPlan here — modal handlers manage it
     } catch (error) {
       console.error("Payment error:", error);
+      setLoadingPlan(null);
       toast({
         title: "Payment Error",
         description: error instanceof Error ? error.message : "Something went wrong.",
         variant: "destructive",
       });
-    } finally {
-      setLoadingPlan(null);
     }
   };
 
@@ -279,23 +288,29 @@ const Pricing = () => {
                         ))}
                       </ul>
 
-                      <Button
-                        onClick={() => handlePurchase(plan.id)}
-                        disabled={loadingPlan !== null}
-                        className={`w-full h-12 text-base ${
-                          plan.popular ? "meta-gradient enterprise-shadow" : ""
-                        }`}
-                        variant={plan.popular ? "default" : "outline"}
-                      >
-                        {loadingPlan === plan.id ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Processing...
-                          </>
-                        ) : (
-                          `Get ${plan.name}`
-                        )}
-                      </Button>
+                      {(() => {
+                        const isCurrent = user && currentPlan === plan.id;
+                        return (
+                          <Button
+                            onClick={() => handlePurchase(plan.id)}
+                            disabled={loadingPlan !== null || authLoading || !!isCurrent}
+                            className={`w-full h-12 text-base ${
+                              plan.popular ? "meta-gradient enterprise-shadow" : ""
+                            }`}
+                            variant={plan.popular ? "default" : "outline"}
+                          >
+                            {loadingPlan === plan.id ? (
+                              <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Processing...</>
+                            ) : isCurrent ? (
+                              "Current Plan"
+                            ) : authLoading ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              `Get ${plan.name}`
+                            )}
+                          </Button>
+                        );
+                      })()}
                     </CardContent>
                   </Card>
                 </motion.div>

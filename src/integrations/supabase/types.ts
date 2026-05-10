@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      razorpay_events: {
+        Row: {
+          created_at: string
+          event_id: string
+          event_type: string
+          id: string
+          payload: Json | null
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          event_type: string
+          id?: string
+          payload?: Json | null
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          event_type?: string
+          id?: string
+          payload?: Json | null
+        }
+        Relationships: []
+      }
       user_generations: {
         Row: {
           created_at: string
@@ -109,7 +133,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      consume_generation: { Args: { p_user_id: string }; Returns: boolean }
+      provision_plan: {
+        Args: { p_limit: number; p_plan: string; p_user_id: string }
+        Returns: undefined
+      }
+      refund_generation: { Args: { p_user_id: string }; Returns: undefined }
     }
     Enums: {
       [_ in never]: never
